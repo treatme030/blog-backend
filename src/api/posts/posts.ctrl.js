@@ -1,12 +1,13 @@
 let postId = 1 // id의 초깃값
 
 //posts 배열 초기 데이터
-const posts = {
-    id: 1,
-    title: '제목',
-    body: '내용',
-}
-
+const posts = [
+    {
+        id: 1,
+        title: '제목',
+        body: '내용',
+    }
+]
 //포스트 작성
 //POST/api/posts
 //{ title, body }
