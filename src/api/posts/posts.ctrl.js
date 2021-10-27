@@ -57,9 +57,30 @@ export const write = async ctx => {
 //포스트 목록 조회
 //GET/api/posts
 export const list = async ctx => {
+    //query는 문자열로 숫자로 변환, 값이 주어지지 않았다면 1을 기본으로 사용
+    const page = parseInt(ctx.query.page || '1', 10);
+
+    if(page < 1){
+        ctx.status = 400;
+        return;
+    }
+
     try {
-        const posts = await Post.find().exec();
-        ctx.body = posts;
+        const posts = await Post.find()
+        .sort({ _id: -1 })//내림차순 정렬
+        .limit(10)//보이는 개수 제한
+        .skip((page - 1)*10)//한 페이지에 보이는 개수
+        .lean()//데이터를 JSON 형태로 조회 가능
+        .exec();
+        //마지막 페이지 커스텀 헤더에 설정 
+        const postCount = await Post.countDocuments().exec();
+        ctx.set('Last-Page', Math.ceil(postCount / 10));
+        ctx.body = posts //내용 길이 제한
+        .map(post => ({
+            ...post,
+            body:
+            post.body.length < 200 ? post.body : `${post.body.slice(0, 200)}...`,
+        }))
     } catch(e){
         ctx.throw(500, e);
     }
