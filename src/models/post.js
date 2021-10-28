@@ -10,6 +10,10 @@ const PostSchema = new Schema({
         type: Date,
         default: Date.now,
     },
+    user: {
+        _id: mongoose.Types.ObjectId,
+        username: String,
+    }
 })
 
 //model 생성, mongoose.model('스키마 이름', 스키마 객체)

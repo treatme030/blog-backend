@@ -6,10 +6,30 @@ import Post from "../../models/post"
 const { ObjectId } = mongoose.Types;
 
 //클라이언트가 요청을 잘못 보낸건지 ObjectId 확인
-export const checkObjectId = (ctx, next) => {
+export const getPostById = async (ctx, next) => {
     const { id } = ctx.params;
     if(!ObjectId.isValid(id)){
         ctx.status = 400; 
+        return;
+    }
+    try {
+        const post = await Post.findById(id);
+        if(!post){
+            ctx.status = 404;
+            return;
+        }
+        ctx.state.post = post;
+        return next();
+    } catch(e){
+        ctx.throw(500, e);
+    }
+}
+
+//포스트 수정, 삭제시 권한 확인
+export const checkOwnPost = (ctx, next) => {
+    const { user, post } = ctx.state;
+    if(post.user._id.toString() !== user._id){
+        ctx.status = 403;
         return;
     }
     return next();
@@ -45,6 +65,7 @@ export const write = async ctx => {
         title,
         body,
         tags,
+        user: ctx.state.user,
     })
     try {
         await post.save();//데이터베이스에 저장
@@ -55,7 +76,7 @@ export const write = async ctx => {
 }
 
 //포스트 목록 조회
-//GET/api/posts
+//GET/api/posts?username=&tag=&page=
 export const list = async ctx => {
     //query는 문자열로 숫자로 변환, 값이 주어지지 않았다면 1을 기본으로 사용
     const page = parseInt(ctx.query.page || '1', 10);
@@ -65,15 +86,22 @@ export const list = async ctx => {
         return;
     }
 
+    const { tag, username } = ctx.query;
+    //tag, username 값이 유효하면 객체 안에 넣고, 그렇지 않으면 넣지 않음
+    const query = {
+        ...(username ? { 'user.username': username } : {}),
+        ...(tag ? { tags: tag } : {}),
+    }
+
     try {
-        const posts = await Post.find()
+        const posts = await Post.find(query)
         .sort({ _id: -1 })//내림차순 정렬
         .limit(10)//보이는 개수 제한
         .skip((page - 1)*10)//한 페이지에 보이는 개수
         .lean()//데이터를 JSON 형태로 조회 가능
         .exec();
         //마지막 페이지 커스텀 헤더에 설정 
-        const postCount = await Post.countDocuments().exec();
+        const postCount = await Post.countDocuments(query).exec();
         ctx.set('Last-Page', Math.ceil(postCount / 10));
         ctx.body = posts //내용 길이 제한
         .map(post => ({
@@ -88,18 +116,8 @@ export const list = async ctx => {
 
 //특정 포스트 조회
 //GET/api/posts/:id
-export const read = async ctx => {
-    const { id } = ctx.params;
-    try {
-        const post = await Post.findById(id).exec();
-        if(!post){
-            ctx.status = 404;
-            return;
-        }
-        ctx.body = post;
-    } catch(e){
-        ctx.throw(500, e);
-    }
+export const read = ctx => {
+    ctx.body = ctx.state.post;
 }
 
 //특정 포스트 제거
