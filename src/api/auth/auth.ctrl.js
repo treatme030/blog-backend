@@ -44,7 +44,7 @@ export const register = async ctx => {
 
         const token = user.generateToken();
         ctx.cookies.set('access_token', token, { 
-                masAge: 1000 * 60 * 60 * 24 * 7,
+                maxAge: 1000 * 60 * 60 * 24 * 7,
                 httpOnly: true,
         })
     } catch(e){
@@ -77,7 +77,7 @@ export const login = async ctx => {
 
         const token = user.generateToken();
         ctx.cookies.set('access_token', token, { 
-                masAge: 1000 * 60 * 60 * 24 * 7,
+                maxAge: 1000 * 60 * 60 * 24 * 7,
                 httpOnly: true,
         })
     } catch(e){
